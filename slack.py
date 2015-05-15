@@ -116,12 +116,17 @@ class SlackStatusPush(StatusReceiverMultiService):
             "short": True
         })
 
-        if branch_names:
-            fields.append({
-                "title": "Merged ref",
-                "value": branch_names,
-                "short": True
-            })
+        fields.append({
+            "title": "Branch",
+            "value": build.getProperty('github_pr_branch'),
+            "short": True
+        })
+
+        fields.append({
+            "title": "Merged ref",
+            "value": branch_names,
+            "short": True
+        })
 
         payload = {
             "text": " ",
