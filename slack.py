@@ -103,13 +103,6 @@ class SlackStatusPush(StatusReceiverMultiService):
                 "value": responsible_users
             })
 
-        if repositories:
-            fields.append({
-                "title": "Repository",
-                "value": repositories,
-                "short": True
-            })
-
         fields.append({
             "title": "Pull Request",
             "value": build.getProperty('github_pr_url'),
@@ -119,12 +112,6 @@ class SlackStatusPush(StatusReceiverMultiService):
         fields.append({
             "title": "Branch",
             "value": build.getProperty('github_pr_branch'),
-            "short": True
-        })
-
-        fields.append({
-            "title": "Merged ref",
-            "value": branch_names,
             "short": True
         })
 
