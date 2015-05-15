@@ -113,7 +113,7 @@ class SlackStatusPush(StatusReceiverMultiService):
 
         fields.append({
             "title": "Pull Request",
-            "value": build.getProperty('github_url'),
+            "value": build.getProperty('github_pr_url'),
             "short": True
         })
 
