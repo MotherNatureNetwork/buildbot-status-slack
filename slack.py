@@ -82,7 +82,6 @@ class SlackStatusPush(StatusReceiverMultiService):
         responsible_users = ', '.join(build.getResponsibleUsers())
         revision = ', '.join([source_stamp.revision for source_stamp in source_stamps])
         project = ', '.join([source_stamp.project for source_stamp in source_stamps])
-        print(dir(build))
 
         if result == SUCCESS:
             status = "Success"
@@ -105,25 +104,23 @@ class SlackStatusPush(StatusReceiverMultiService):
                 "value": responsible_users
             })
 
-        if repositories and False:
+        if repositories:
             fields.append({
                 "title": "Repository",
                 "value": repositories,
                 "short": True
             })
 
-        interp = ('%(prop:github_repo_owner)s/%(prop:github_repo_name)s'
-                  '/pull/%(prop:github_pr_number)s')
         fields.append({
-            "title": "PR",
-            "value": util.Interpolate('https://github.com/{0}'.format(interp)),
+            "title": "Pull Request",
+            "value": build.getProperty('github_url'),
             "short": True
         })
 
         if branch_names:
             fields.append({
-                "title": "Branch",
-                "value": util.Interpolate('%(prop:github_pr_branch)s'),
+                "title": "Merged ref",
+                "value": branch_names,
                 "short": True
             })
 
