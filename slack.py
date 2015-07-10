@@ -90,13 +90,7 @@ class SlackStatusPush(StatusReceiverMultiService):
             status = "Failure"
             color = "failure"
 
-        message = "New Build for {project} ({revision})\nStatus: *{status}*\nChanges: {reason} \nUrl:{url}".format(
-            project=builder_name,
-            revision=revision,
-            status=status,
-            reason=reason,
-            url=build_url
-        )
+        message = "New Build for %s \nStatus: *%s*\nChanges: %s \nUrl:%s" % (builder_name, status, reason, build_url)
 
         fields = []
         if responsible_users:
