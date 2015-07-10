@@ -81,6 +81,7 @@ class SlackStatusPush(StatusReceiverMultiService):
         responsible_users = ', '.join(build.getResponsibleUsers())
         revision = ', '.join([source_stamp.revision for source_stamp in source_stamps])
         project = ', '.join([source_stamp.project for source_stamp in source_stamps])
+        reason = build.getReason()
 
         if result == SUCCESS:
             status = "Success"
@@ -89,10 +90,11 @@ class SlackStatusPush(StatusReceiverMultiService):
             status = "Failure"
             color = "failure"
 
-        message = "New Build for {project} ({revision})\nStatus: *{status}*\nBuild details: {url}".format(
-            project=project,
+        message = "New Build for {project} ({revision})\nStatus: *{status}*\nChanges: {reason} \nUrl:{url}".format(
+            project=builder_name,
             revision=revision,
             status=status,
+            reason=reason,
             url=build_url
         )
 
