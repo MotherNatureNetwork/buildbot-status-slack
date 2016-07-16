@@ -1,137 +1,60 @@
-from buildbot.status.base import StatusReceiverMultiService
-from buildbot.status.builder import SUCCESS
-import requests
-import json
+from twisted.internet import defer
+from twisted.python import log
+
+from buildbot import config
+from buildbot.process.results import statusToString
+from buildbot.reporters import utils
+from buildbot.reporters.http import HttpStatusPushBase
 
 
-class SlackStatusPush(StatusReceiverMultiService):
-    """
-    Sends messages to a Slack.io channel when each build finishes with a handy
-    link to the build results.
-    """
+class SlackStatusPush(HttpStatusPushBase):
+    name = "SlackStatusPush"
 
-    def __init__(self, weburl,
-                 localhost_replace=False, username=None, icons=None,
-                 builders=None, notify_on_success=True, notify_on_failure=True,
-                 **kwargs):
-        """
-        Creates a SlackStatusPush status service.
+    def checkConfig(self, endpoint="https://slack.com", **kwargs):
+        if not isinstance(endpoint, basestring):
+            config.error('endpoint must be a string')
 
-        :param weburl: Your Slack weburl
-        :param localhost_replace: If your Buildbot web fronted doesn't know
-            its public address it will use "localhost" in its links. You can
-            change this by setting this variable to true.
-        :param username: The user name of the "user" positing the messages on
-            Slack.
-        :param icons: tuple str (succ, fail) emoji names or icon urls
-        :param notify_on_success: Set this to False if you don't want
-            messages when a build was successful.
-        :param notify_on_failure: Set this to False if you don't want
-            messages when a build failed.
-        :param builders: List of builder names to filter on. The default value
-            of None will result in notifications for every builder.
-        """
+    @defer.inlineCallbacks
+    def reconfigService(self, endpoint="https://slack.com", **kwargs):
+        yield HttpStatusPushBase.reconfigService(self, **kwargs)
+        self.endpoint = endpoint
 
-        StatusReceiverMultiService.__init__(self)
+    @defer.inlineCallbacks
+    def buildStarted(self, key, build):
+        yield self.send(build, key[2])
 
-        self.weburl = weburl
-        self.localhost_replace = True if localhost_replace else False
-        self.username = username
-        self.icons = icons
-        self.builders = builders
-        self.notify_on_success = notify_on_success
-        self.notify_on_failure = notify_on_failure
-        self.watched = []
+    @defer.inlineCallbacks
+    def buildFinished(self, key, build):
+        yield self.send(build, key[2])
 
-    def setServiceParent(self, parent):
-        StatusReceiverMultiService.setServiceParent(self, parent)
-        self.master_status = self.parent
-        self.master_status.subscribe(self)
-        self.master = self.master_status.master
+    @defer.inlineCallbacks
+    def getBuildDetailsAndSendMessage(self, build, key):
+        yield utils.getDetailsForBuild(self.master, build, **self.neededDetails)
+        message = yield self.getMessage(build, key)
+        postData = { "text": message }        
+        extra_params = yield self.getExtraParams(build, key)
+        postData.update(extra_params)
+        defer.returnValue(postData)
 
-    def disownServiceParent(self):
-        self.master_status.unsubscribe(self)
-        self.master_status = None
-        for w in self.watched:
-            w.unsubscribe(self)
-        return StatusReceiverMultiService.disownServiceParent(self)
-
-    def builderAdded(self, name, builder):
-        self.watched.append(builder)
-        return self  # subscribe to this builder
-
-    def buildFinished(self, builder_name, build, result):
-        if not self.notify_on_success and result == SUCCESS:
-            return
-
-        if not self.notify_on_failure and result != SUCCESS:
-            return
-
-        if self.builders and builder_name not in self.builders:
-            return
-
-        build_url = self.master_status.getURLForThing(build)
-        if self.localhost_replace:
-            local_base_url = self.master_status.getBuildbotURL()
-            title_base_url = self.master_status.getTitleURL()
-            build_url = build_url.replace(local_base_url, title_base_url)
-
-        source_stamps = build.getSourceStamps()
-        branch_names = ', '.join([source_stamp.branch for source_stamp in source_stamps])
-        repositories = ', '.join([source_stamp.repository for source_stamp in source_stamps])
-        responsible_users = ', '.join(build.getResponsibleUsers())
-        revision = ', '.join([source_stamp.revision for source_stamp in source_stamps])
-        project = ', '.join([source_stamp.project for source_stamp in source_stamps])
-        reason = build.getReason()
-
-        if result == SUCCESS:
-            status = "Success"
-            color = "good"
-        else:
-            status = "Failure"
-            color = "failure"
-
-        message = "New Build for %s \nStatus: *%s*\nChanges: %s \nUrl: %s" % (builder_name, status, reason, build_url)
-
-        fields = []
-        if responsible_users:
-            fields.append({
-                "title": "Commiters",
-                "value": responsible_users
-            })
-
-        if repositories:
-            fields.append({
-                "title": "Repository",
-                "value": repositories,
-                "short": True
-            })
-
-        if branch_names:
-            fields.append({
-                "title": "Branch",
-                "value": branch_names,
-                "short": True
-            })
-
-        payload = {
-            "text": " ",
-            "attachments": [
-              {
-                "fallback": message,
-                "text": message,
-                "color": color,
-                "mrkdwn_in": ["text", "title", "fallback"],
-                "fields": fields
-              }
-            ]
+    def getMessage(self, build, event_name):
+        event_messages = {
+            'new': 'Buildbot started build %s here: %s' % (build['builder']['name'], build['url']),
+            'finished': 'Buildbot finished build %s with result %s here: %s'
+                        % (build['builder']['name'], statusToString(build['results']), build['url'])
         }
+        return event_messages.get(event_name, '')
 
-        if self.username:
-            payload['username'] = self.username
+    # use this as an extension point to inject extra parameters into your postData
+    def getExtraParams(self, build, event_name):
+        return {}
 
-        if self.icons:
-            icon = self.icons[0 if result == SUCCESS else 1]
-            payload['icon_emoji' if icon.startswith(':') else 'icon_url'] = icon
+    @defer.inlineCallbacks
+    def send(self, build, key):
+        postData = yield self.getBuildDetailsAndSendMessage(build, key)
+        if not postData or 'text' not in postData or not postData['text']:
+            return
 
-        requests.post(self.weburl, data=json.dumps(payload))
+        response = yield self.session.post(url, postData)
+        if response.status_code != 200:
+            log.msg("%s: unable to upload status: %s" %
+                    (response.status_code, response.content))
