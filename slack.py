@@ -9,6 +9,7 @@ from buildbot.reporters.http import HttpStatusPushBase
 
 class SlackStatusPush(HttpStatusPushBase):
     name = "SlackStatusPush"
+    neededDetails = dict(wantProperties=True)
 
     def checkConfig(self, endpoint="https://slack.com", **kwargs):
         if not isinstance(endpoint, basestring):
