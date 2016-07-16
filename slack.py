@@ -35,7 +35,7 @@ class SlackStatusPush(StatusReceiverMultiService):
         StatusReceiverMultiService.__init__(self)
 
         self.weburl = weburl
-        self.localhost_replace = localhost_replace
+        self.localhost_replace = True if localhost_replace else False
         self.username = username
         self.icons = icons
         self.builders = builders
@@ -72,8 +72,9 @@ class SlackStatusPush(StatusReceiverMultiService):
 
         build_url = self.master_status.getURLForThing(build)
         if self.localhost_replace:
-            build_url = build_url.replace("//localhost", "//{}".format(
-                self.localhost_replace))
+            local_base_url = self.master_status.getBuildbotURL()
+            title_base_url = self.master_status.getTitleURL()
+            build_url = build_url.replace(local_base_url, title_base_url)
 
         source_stamps = build.getSourceStamps()
         branch_names = ', '.join([source_stamp.branch for source_stamp in source_stamps])
