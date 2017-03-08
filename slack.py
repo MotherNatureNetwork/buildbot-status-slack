@@ -89,7 +89,7 @@ class SlackStatusPush(service.BuildbotService):
         if build['complete']:
             build_date = build['complete_at'].strftime('%x %X')
 
-        msg = '{} {} build for {} on {}. Reason: {}.'.format(build['properties']['owner'][0], build['state_string'], build['builder']['name'], build_date, build['properties']['reason'][0])
+        msg = '{} build for {} on {}. Reason: {}.'.format(build['state_string'], build['builder']['name'], build_date, build['properties']['reason'][0])
         if build['complete']:
             msg += ' Build ended in {}'.format(state[0])
         return msg, state[1]
