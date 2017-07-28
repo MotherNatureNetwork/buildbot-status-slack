@@ -94,11 +94,11 @@ class SlackStatusPush(service.BuildbotService):
         if project_name_tuple:
             project_name = project_name_tuple[0]
 
-            msg = '[{}] {} build for {} on {}.'.format(
+            msg = '[{}] {} build for {}. [<{}|build>]'.format(
                 project_name,
                 build['state_string'],
                 build['builder']['name'],
-                build_date
+                build['url'],
             )
         else:
             msg = '{} build for {} on {}.'.format(
