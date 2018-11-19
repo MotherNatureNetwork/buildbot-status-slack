@@ -4,7 +4,7 @@ setup(
     name='buildbot_status_slack',
     version='0.1.0',
     author=['Sylvain Zimmer', 'Marten Klitzke', 'Raphael Randschau'],
-    packages=[],
+    packages=['buildbot_status_slack'],
     scripts=[],
     url='https://github.com/mindmatters/buildbot-status-slack',
     license='LICENSE.txt',
