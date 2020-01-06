@@ -11,6 +11,6 @@ setup(
     description='slack status plugin for buildbot',
     long_description=open('README.md').read(),
     install_requires=[
-        "buildbot >= 0.8.0",
+        "buildbot < 2",
     ],
 )
